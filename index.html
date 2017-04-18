@@ -9,7 +9,7 @@
     </style>
   </head>
   <body>
-    <canvas id="myCanvas" width="578" height="200"></canvas>
+    <canvas id="myCanvas" width="800" height="500"></canvas>
     <script>
     //setup scripts
       window.requestAnimFrame = (function(callback) {
@@ -35,21 +35,21 @@
                     break;
             }
         }
-        function calcRockIntersection(boat,rockVertexes){
+        function calcRockIntersection(boat,rockVertexes,boatVertexes,rocks,lastPosition){
             for(var i=0;i<rockVertexes.length;i++){
                 axises = findAxises(rockVertexes[i]);
-                axises = axises.concat(findAxises([[boat.x,boat.y],[boat.x+boat.width,boat.y],[boat.x+boat.width,boat.y+boat.height],[boat.x,boat.y+boat.height]]));
+                axises = axises.concat(findAxises(boatVertexes));
                 var minOverlap = null;
                 var minAxis = null;
                 for(var j=0;j<axises.length;j++){
                     rockProject = project(axises[j],rockVertexes[i]);
-                    boatProject = project(axises[j],[[boat.x,boat.y],[boat.x+boat.width,boat.y],[boat.x+boat.width,boat.y+boat.height],[boat.x,boat.y+boat.height]]);
+                    boatProject = project(axises[j],boatVertexes);
                     if(rockProject[1]>boatProject[1]){
                         if(boatProject[1]>rockProject[0]){
                             overlap = boatProject[1]-rockProject[0];
                             if(overlap<minOverlap || minOverlap === null){
                                 minOverlap = overlap;
-                                minAxis = axises[j];
+                                minAxis = [-1*axises[j][0],-1*axises[j][1]];
                             }
                             continue;
                         }
@@ -71,11 +71,23 @@
                 //move boat based on min overlap   
                 if(minOverlap!==null){
                     var mag1 = Math.sqrt(Math.pow(minAxis[0],2)+Math.pow(minAxis[1],2));
-                    var v1 = [minAxis[0]/mag1,minAxis[1]/mag1];
-                    boat.x = boat.x + boat.linearSpeed*v1[0];
-                    boat.y = boat.y + boat.linearSpeed*v1[1];
+                    var v1 = [minOverlap*minAxis[0]/mag1,minOverlap*minAxis[1]/mag1];
+                    var newX = boat.x + v1[0];
+                    var newY = boat.y + v1[1];
+                    if(newX> 0 && newX < canvas.width - boat.width - boat.borderWidth / 2) {
+                        boat.x = newX;
+                    }
+                    if(newY> 0 && newY < canvas.height - boat.height - boat.borderWidth / 2) {
+                        boat.y = newY
+                    }
+                    var boatSpeed = Math.sqrt(Math.pow(lastPosition[1]-boat.y,2)+Math.pow(lastPosition[0]-boat.x,2));
+                    console.log(boatSpeed);
+                    var rockSpeed = rocks[i].linearSpeed;
+                    if(rockSpeed + boatSpeed > impactFailFactor){
+                        failFlag = true;
+                    }
                 }
-            }            
+            }  
         }
         function project(axis,vertexes){
             var mag1 = Math.sqrt(Math.pow(axis[0],2)+Math.pow(axis[1],2));
@@ -109,35 +121,73 @@
         function calcQueuePosition(queue,boat){
             for(var i=0;i<queue.length;i++){
                 var item = queue.pop();
-                var newX = boat.x;
                 var newY = boat.y;
+                var rot = boat.rot;
                 if(item === "ArrowRight"){
-                    newX = newX + boat.linearSpeed;
+                    rot = (rot + boat.rotSpeed);
                 }
                 else if(item === "ArrowLeft"){
-                    newX = newX - boat.linearSpeed;
+                    rot = (rot - boat.rotSpeed);
                 }
                 else if(item === "ArrowDown"){
-                    newY = newY + boat.linearSpeed;
+                    newY = newY + boat.paddleSpeed;
                 } else if(item === "ArrowUp"){
-                    newY = newY - boat.linearSpeed;
+                    newY = newY - boat.paddleSpeed;
                 }
-                if(newX> 0 && newX < canvas.width - boat.width - boat.borderWidth / 2) {
-                    boat.x = newX;
+                if(boat.x> 0 && boat.x < canvas.width - boat.width - boat.borderWidth / 2) {
+                    boat.rot = rot;
                 }
                 if(newY> 0 && newY < canvas.height - boat.height - boat.borderWidth / 2) {
                     boat.y = newY
+                    boat.rot = rot;
                 }
             }
         }
-        function calcNewBoatPosition(queue,canvas,boat,rockVertexes){
+        function calcRiverPostition(boat,boatVertexes){
+            var mag = Math.sqrt(Math.pow(boatVertexes[0][0]-boat.x,2)+Math.pow(boatVertexes[0][1]-boat.y,2));
+            var vx = boat.linearSpeed*(boatVertexes[0][0]-boat.x)/mag;
+            var vy = boat.linearSpeed*(boatVertexes[0][1]-boat.y)/mag;
+            var newX = boat.x + vx;
+            var newY = boat.y + vy + riverSpeed;
+            if(newX> 0 && newX < canvas.width - boat.width - boat.borderWidth / 2) {
+                boat.x = newX;
+            }
+            if(newY> 0 && newY < canvas.height - boat.height - boat.borderWidth / 2) {
+                boat.y = newY;
+            }
+        }
+        function calcNewBoatPosition(queue,canvas,boat,rockVertexes,boatVertexes,rocks){
+            calcRiverPostition(boat,boatVertexes);
+            calcRockIntersection(boat,rockVertexes,boatVertexes,rocks,lastPosition);
             calcQueuePosition(queue,boat);
-            calcRockIntersection(boat,rockVertexes);
         }
         function calcNewRockPositions(canvas,rocks){
-        
+            for(var i = 0;i<rocks.length;i++){
+                var rock = rocks[i];
+                rock.y = rock.y + rock.linearSpeed;
+                if(rock.y>canvas.height){
+                    rocks.splice(i,1);
+                }
+            }
         }
         
+        //generate new obstacles
+        function generateRandomRocks(canvas,rocks){
+            var rand = Math.random();
+            if(rand>0.93){
+                var rand2 = Math.random();
+                var rand3 = Math.random();
+                var randRock = {
+                    x: rand2*canvas.width,
+                    y: 0,
+                    scalex: rand3*10,
+                    scaley: rand3*10,
+                    borderWidth: 2,
+                    linearSpeed: rockSpeed
+                };
+                rocks.push(randRock);
+            }
+        }
         
         //helper functions
         function addEvent(event,obj,func){
@@ -151,11 +201,86 @@
       
       
       //drawing functions
-      function drawBoat(myRectangle, context) {
+      function drawBoat(boat, context) {
+        var p1x = boat.width/2;
+        var p1y = 0;
+        var p2x = boat.width/2;
+        var p2y = 0;
+        var p3x = boat.width/2;
+        var p3y = 0;
+        var p4x = boat.width/2;
+        var p4y = 0;
+        var p5x = -boat.width/2;
+        var p5y = 0;
+        var p6x = -boat.width/2;
+        var p6y = 0;
+        var p7x = 0;
+        var p7y = -boat.height/2;
+        var p8x = 0;
+        var p8y = -boat.height/2;
+        var a1x = 0;
+        var a1y = -boat.height/2;
+        var a2x = boat.width/2;
+        var a2y = 0;
+        var a3x = 0;
+        var a3y = boat.height/2;
+        var a4x = -boat.width/2;
+        var a4y = 0;
+        var cos = Math.cos(boat.rot);
+        var sin = Math.sin(boat.rot);
+        var a1x_f = a1x*cos - a1y*sin;
+        var a2x_f = a2x*cos - a2y*sin;
+        var a3x_f = a3x*cos - a3y*sin;
+        var a4x_f = a4x*cos - a4y*sin;
+        var a1y_f = a1x*sin + a1y*cos;
+        var a2y_f = a2x*sin + a2y*cos;
+        var a3y_f = a3x*sin + a3y*cos;
+        var a4y_f = a4x*sin + a4y*cos;
+        var p1x_f = p1x*cos - p1y*sin;
+        var p2x_f = p2x*cos - p2y*sin;
+        var p3x_f = p3x*cos - p3y*sin;
+        var p4x_f = p4x*cos - p4y*sin;
+        var p5x_f = p5x*cos - p5y*sin;
+        var p6x_f = p6x*cos - p6y*sin;
+        var p7x_f = p7x*cos - p7y*sin;
+        var p8x_f = p8x*cos - p8y*sin;
+        var p1y_f = p1x*sin + p1y*cos;
+        var p2y_f = p2x*sin + p2y*cos;
+        var p3y_f = p3x*sin + p3y*cos;
+        var p4y_f = p4x*sin + p4y*cos;
+        var p5y_f = p5x*sin + p5y*cos;
+        var p6y_f = p6x*sin + p6y*cos;
+        var p7y_f = p7x*sin + p7y*cos;
+        var p8y_f = p8x*sin + p8y*cos;
         context.beginPath();
-        context.rect(myRectangle.x, myRectangle.y, myRectangle.width, myRectangle.height);
+        context.moveTo(boat.x+a1x_f,boat.y+a1y_f);
+        context.bezierCurveTo(boat.x+p1x_f,boat.y+p1y_f,boat.x+p2x_f,boat.y+p2y_f,boat.x+a2x_f,boat.y+a2y_f);
+        context.bezierCurveTo(boat.x+p3x_f,boat.y+p3y_f,boat.x+p4x_f,boat.y+p4y_f,boat.x+a3x_f,boat.y+a3y_f);
+        context.bezierCurveTo(boat.x+p5x_f,boat.y+p5y_f,boat.x+p6x_f,boat.y+p6y_f,boat.x+a4x_f,boat.y+a4y_f);
+        context.bezierCurveTo(boat.x+p7x_f,boat.y+p7y_f,boat.x+p8x_f,boat.y+p8y_f,boat.x+a1x_f,boat.y+a1y_f);
         context.fillStyle = '#8ED6FF';
         context.fill();
+      }
+      function getBoatVertexes(boat) {
+        var a1x = 0;
+        var a1y = -boat.height/2;
+        var a2x = boat.width/2;
+        var a2y = 0;
+        var a3x = 0;
+        var a3y = boat.height/2;
+        var a4x = -boat.width/2;
+        var a4y = 0;
+        var cos = Math.cos(boat.rot);
+        var sin = Math.sin(boat.rot);
+        var a1x_f = a1x*cos - a1y*sin;
+        var a2x_f = a2x*cos - a2y*sin;
+        var a3x_f = a3x*cos - a3y*sin;
+        var a4x_f = a4x*cos - a4y*sin;
+        var a1y_f = a1x*sin + a1y*cos;
+        var a2y_f = a2x*sin + a2y*cos;
+        var a3y_f = a3x*sin + a3y*cos;
+        var a4y_f = a4x*sin + a4y*cos;
+        return [[boat.x+a1x_f,boat.y+a1y_f],[boat.x+a2x_f,boat.y+a2y_f],[boat.x+a3x_f,boat.y +a3y_f],[boat.x+a4x_f,boat.y+a4y_f]];
       }
       function drawRock(rock, context){
         var vertexes = [[rock.x+6*rock.scalex,rock.y],
@@ -215,26 +340,34 @@
       
       //animation loop
       //this is the outer loop for the double loop strucutre to capture events
-      function animate(canvas, context, startTime) {
+      function animate(canvas, context, startTime, lastPosition) {
 
         // clear the canvas and all previous vertexes
         context.clearRect(0, 0, canvas.width, canvas.height);
         rockVertexes = [];
         
+        //generate new obstacles
+        generateRandomRocks(canvas,rocks);
         //draw all the obstacles and update their positions
         calcNewRockPositions(canvas,rocks);
         rocks.forEach(function(rock,index,rocks){
            rockVertexes.push(drawRock(rock,context));
-        });
+        });        
+        boatVertexes = getBoatVertexes(myBoat);
         //calculate new boat positions
-        calcNewBoatPosition(canvas,myBoat,rockVertexes);
+        calcNewBoatPosition(canvas,myBoat,rockVertexes,boatVertexes,rocks,lastPosition);
         //draw the boat
         drawBoat(myBoat, context);
-
-        // request new frame
-        requestAnimFrame(function() {
-           animate( canvas, context, startTime);
-        });
+        //failure criterion
+        if(failFactor<Math.sqrt(Math.pow(lastPosition[1]-myBoat.y,2)+Math.pow(lastPosition[0]-myBoat.x,2))&&!failFlag){
+            lastPosition = [myBoat.x,myBoat.y];
+            // request new frame
+            requestAnimFrame(function() {
+            animate( canvas, context, startTime, lastPosition);
+            });
+        } else {
+            alert("fail");
+        }
       }
       
       
@@ -243,36 +376,36 @@
       var canvas = document.getElementById('myCanvas');
       var context = canvas.getContext('2d');
         var rockVertexes = [];
+        var boatVertexes = [];
         var rocks = [];
         var queue = [];
-      var rock = {
-        x:canvas.width/2,
-        y:canvas.height/2,
-        scalex: 10,
-        scaley: 10,
-        borderWidth: 2
-      }
+        var lastPosition = [0,0];
+        var failFactor = .1;
+        var impactFailFactor = 5;
+        var riverSpeed = 2;
+        var failFlag = false;
+        var rockSpeed = 2;
       var myBoat = {
-        x: 0,
-        y: 0,
-        width: 100,
-        height: 50,
+        x: canvas.width/2,
+        y: canvas.height-100,
+        width: 50,
+        height: 100,
         borderWidth: 0,
-        linearSpeed: 5
+        linearSpeed: 2,
+        rotSpeed: .4,
+        rot: .5,
+        paddleSpeed: 5
       };
-      //setup all obstacles
-        rocks.push(rock);
         
         //setup all event listeners and bindings
         calcNewBoatPosition = calcNewBoatPosition.bind(this,queue);
         addEvent("keydown",document,manageKeydown.bind(this,queue));
     
         
-        
       // wait one second before starting animation
       setTimeout(function() {
         var startTime = (new Date()).getTime();
-        animate(canvas, context, startTime);
+        animate(canvas, context, startTime, lastPosition);
       }, 1000);
     </script>
   </body>
