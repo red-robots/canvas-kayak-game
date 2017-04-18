@@ -81,8 +81,6 @@
                         boat.y = newY
                     }
                     var boatSpeed = Math.sqrt(Math.pow(lastPosition[1]-boat.y,2)+Math.pow(lastPosition[0]-boat.x,2));
-                    console.log(boatSpeed);
-                    var rockSpeed = rocks[i].linearSpeed;
                     if(rockSpeed + boatSpeed > impactFailFactor){
                         failFlag = true;
                     }
@@ -156,7 +154,7 @@
                 boat.y = newY;
             }
         }
-        function calcNewBoatPosition(queue,canvas,boat,rockVertexes,boatVertexes,rocks){
+        function calcNewBoatPosition(queue,canvas,boat,rockVertexes,boatVertexes,rocks,lastPosition){
             calcRiverPostition(boat,boatVertexes);
             calcRockIntersection(boat,rockVertexes,boatVertexes,rocks,lastPosition);
             calcQueuePosition(queue,boat);
