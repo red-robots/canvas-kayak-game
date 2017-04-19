@@ -9,6 +9,7 @@
     </style>
   </head>
   <body>
+    <div id="banner"></div>
     <canvas id="myCanvas" width="800" height="500" style="border: 1px solid black;"></canvas>
     <script>
     //setup scripts
@@ -125,28 +126,33 @@
                 var newY = boat.y;
                 var newX = boat.x;
                 var rot = boat.rot;
+                var paddleRot = boat.paddleRot;
                 if(item === "ArrowRight"){
                     rot = (rot + boat.rotSpeed);
+                    paddleRot = (paddleRot + boat.paddleRotSpeed) % boat.paddleRotMax;
                 }
                 else if(item === "ArrowLeft"){
                     rot = (rot - boat.rotSpeed);
+                    paddleRot = (paddleRot - boat.paddleRotSpeed) % boat.paddleRotMax;
                 }
                 else if(item === "ArrowDown"){
                     newX = newX - vx;
                     newY = newY - vy;
+                    paddleRot = (paddleRot + boat.paddleRotSpeed) % boat.paddleRotMax;
                 } else if(item === "ArrowUp"){
                     newX = newX + vx;
                     newY = newY + vy;
+                    paddleRot = (paddleRot + boat.paddleRotSpeed) % boat.paddleRotMax;
                 }
                 if(boat.x> 0 && boat.x < canvas.width - boat.width - boat.borderWidth / 2) {
                     boat.rot = rot;
-                    console.log(newX);
+                    boat.paddleRot = paddleRot;
                     boat.x = newX;
                 }
                 if(newY> 0 && newY < canvas.height - boat.height - boat.borderWidth / 2) {
                     boat.y = newY
-                    console.log(newY);
                     boat.rot = rot;
+                    boat.paddleRot = paddleRot;
                 }
             }
         }
@@ -171,9 +177,18 @@
         function calcNewRockPositions(canvas,rocks){
             for(var i = 0;i<rocks.length;i++){
                 var rock = rocks[i];
-                rock.y = rock.y + rock.linearSpeed;
+                rock.y = rock.y + riverSpeed + rock.linearSpeed;
                 if(rock.y>canvas.height){
                     rocks.splice(i,1);
+                }
+            }
+        }
+        function calcNewWavePositions(canvas,waves){
+            for(var i = 0;i<waves.length;i++){
+                var wave = waves[i];
+                wave.y = wave.y + riverSpeed + wave.linearSpeed;
+                if(wave.y>canvas.height){
+                    waves.splice(i,1);
                 }
             }
         }
@@ -181,18 +196,41 @@
         //generate new obstacles
         function generateRandomRocks(canvas,rocks){
             var rand = Math.random();
-            if(rand>rockCreationFactor){
+            if(rand>rockCreation){
                 var rand2 = Math.random();
                 var rand3 = Math.random();
+                rand3 =  Math.max(rand3,0.4);
                 var randRock = {
                     x: rand2*canvas.width,
-                    y: 0,
+                    y: -10,
                     scalex: rand3*10,
                     scaley: rand3*10,
                     borderWidth: 2,
                     linearSpeed: rockSpeed
                 };
                 rocks.push(randRock);
+            }
+        }
+        function generateRandomWaves(canvas,waves){
+            var rand = Math.random();
+            if(rand>waveCreation){
+                var rand2 = Math.random();
+                var rand3 = Math.random();
+                var rand4 = Math.random();
+                rand3 = Math.max(rand3,0.5);
+                var flip = 1;
+                if(rand4>0.5){
+                    flip = -1;
+                }
+                var randWave = {
+                    x: rand2*canvas.width,
+                    y: -waveHeight,
+                    height: rand3*waveHeight,
+                    width: flip*rand3*waveWidth,
+                    borderWidth: 2,
+                    linearSpeed: waveSpeed
+                };
+                waves.push(randWave);
             }
         }
         
@@ -209,32 +247,46 @@
       
       //drawing functions
       function drawBoat(boat, context) {
-        var p1x = boat.width/2;
-        var p1y = 0;
-        var p2x = boat.width/2;
-        var p2y = 0;
-        var p3x = boat.width/2;
-        var p3y = 0;
-        var p4x = boat.width/2;
-        var p4y = 0;
-        var p5x = -boat.width/2;
-        var p5y = 0;
-        var p6x = -boat.width/2;
-        var p6y = 0;
-        var p7x = 0;
-        var p7y = -boat.height/2;
-        var p8x = 0;
-        var p8y = -boat.height/2;
+        var width = boat.width/2;
+        var height = boat.height/2;
+        var p1x = .75*width;
+        var p1y = -.65*height;
+        var p2x = width;
+        var p2y = -.25*height;
+        var p3x = width;
+        var p3y = .25*height;
+        var p4x = .75*width;
+        var p4y = .65*height;
+        var p5x = -.75*width;
+        var p5y = .65*height;
+        var p6x = -width;
+        var p6y = .25*height;
+        var p7x = -width;
+        var p7y = -.25*height;
+        var p8x = -.75*width;
+        var p8y = -.65*height;
+        //anchors for boat
         var a1x = 0;
-        var a1y = -boat.height/2;
-        var a2x = boat.width/2;
+        var a1y = -height;
+        var a2x = width;
         var a2y = 0;
         var a3x = 0;
-        var a3y = boat.height/2;
-        var a4x = -boat.width/2;
+        var a3y = height;
+        var a4x = -width;
         var a4y = 0;
+        //anchors for paddle
+        var a5x = -2*width;
+        var a5y = 0;
+        var a6x = 2*width;
+        var a6y = 0;
+        
+        //calculate rotation
         var cos = Math.cos(boat.rot);
         var sin = Math.sin(boat.rot);
+        //paddle rotation
+        var pcos = Math.cos(boat.rot+boat.paddleRot);
+        var psin = Math.sin(boat.rot+boat.paddleRot);
+        //boat anchors
         var a1x_f = a1x*cos - a1y*sin;
         var a2x_f = a2x*cos - a2y*sin;
         var a3x_f = a3x*cos - a3y*sin;
@@ -259,14 +311,32 @@
         var p6y_f = p6x*sin + p6y*cos;
         var p7y_f = p7x*sin + p7y*cos;
         var p8y_f = p8x*sin + p8y*cos;
+        //paddle anchors
+        var a5x_f = a5x*pcos - a5y*psin;
+        var a6x_f = a6x*pcos - a6y*psin;
+        var a5y_f = a5x*psin + a5y*pcos;
+        var a6y_f = a6x*psin + a6y*pcos;
         context.beginPath();
         context.moveTo(boat.x+a1x_f,boat.y+a1y_f);
         context.bezierCurveTo(boat.x+p1x_f,boat.y+p1y_f,boat.x+p2x_f,boat.y+p2y_f,boat.x+a2x_f,boat.y+a2y_f);
         context.bezierCurveTo(boat.x+p3x_f,boat.y+p3y_f,boat.x+p4x_f,boat.y+p4y_f,boat.x+a3x_f,boat.y+a3y_f);
         context.bezierCurveTo(boat.x+p5x_f,boat.y+p5y_f,boat.x+p6x_f,boat.y+p6y_f,boat.x+a4x_f,boat.y+a4y_f);
         context.bezierCurveTo(boat.x+p7x_f,boat.y+p7y_f,boat.x+p8x_f,boat.y+p8y_f,boat.x+a1x_f,boat.y+a1y_f);
-        context.fillStyle = '#8ED6FF';
+        context.fillStyle = 'black';
         context.fill();
+        context.closePath();
+        context.beginPath();
+        context.moveTo(boat.x+a5x_f, boat.y+a5y_f);
+        context.lineTo(boat.x+a6x_f, boat.y+a6y_f);
+        context.lineWidth = 4;
+        context.strokeStyle = '#ff0000';
+        context.stroke();
+        context.closePath();
+        context.beginPath();
+        context.arc(boat.x, boat.y, boat.hole, 0, 2 * Math.PI, false);
+        context.fillStyle = 'white';
+        context.fill();
+        context.closePath();
       }
       function getBoatVertexes(boat) {
         var a1x = 0;
@@ -289,58 +359,61 @@
         var a4y_f = a4x*sin + a4y*cos;
         return [[boat.x+a1x_f,boat.y+a1y_f],[boat.x+a2x_f,boat.y+a2y_f],[boat.x+a3x_f,boat.y +a3y_f],[boat.x+a4x_f,boat.y+a4y_f]];
       }
+      function drawWave(wave, context){
+        context.beginPath();
+        context.moveTo(wave.x,wave.y);
+        context.bezierCurveTo(wave.x+wave.width,wave.y+wave.height/2,wave.x - wave.width,wave.y+wave.height/2,wave.x,wave.y+wave.height);
+        context.lineWidth = wave.lineWidth;
+        context.strokeStyle="#fff";
+        context.stroke();
+      }
       function drawRock(rock, context){
-        var vertexes = [[rock.x+6*rock.scalex,rock.y],
-        [rock.x+10*rock.scalex,rock.y-3*rock.scaley],
-        [rock.x+5*rock.scalex,rock.y-8*rock.scaley],
-        [rock.x,rock.y-5*rock.scaley],
-        [rock.x+1*rock.scalex,rock.y-2*rock.scaley]];
+        var vertexes = [[rock.x,rock.y-6*rock.scaley],
+        [rock.x+4*rock.scalex,rock.y-1*rock.scaley],
+        [rock.x-1*rock.scalex,rock.y+4*rock.scaley],
+        [rock.x-6*rock.scalex,rock.y+1*rock.scaley],
+        [rock.x-5*rock.scalex,rock.y-2*rock.scaley]];
         
         context.beginPath();
-        context.moveTo(rock.x+6*rock.scalex,rock.y);
-        context.lineTo(rock.x+6*rock.scalex,rock.y-4*rock.scaley);
-        context.lineTo(rock.x+10*rock.scalex,rock.y-3*rock.scaley);
+        context.moveTo(rock.x,rock.y-6*rock.scaley);
+        context.lineTo(rock.x,rock.y);
+        context.lineTo(rock.x+4*rock.scalex,rock.y-1*rock.scaley);
         context.closePath();
-        context.lineWidth = rock.borderWidth;
-        context.fillStyle = '#00b';
+        context.fillStyle = '#4F597D';
         context.fill();
         
         context.beginPath();
-        context.moveTo(rock.x+10*rock.scalex,rock.y-3*rock.scaley);
-        context.lineTo(rock.x+5*rock.scalex,rock.y-8*rock.scaley);
-        context.lineTo(rock.x+6*rock.scalex,rock.y-4*rock.scaley);
+        context.moveTo(rock.x+4*rock.scalex,rock.y-1*rock.scaley);
+        context.lineTo(rock.x-1*rock.scalex,rock.y+4*rock.scaley);
+        context.lineTo(rock.x,rock.y);
         context.closePath();
-        context.lineWidth = rock.borderWidth;
-        context.fillStyle = '#00a';
+        context.fillStyle = '#515B7F';
         context.fill();
         
         context.beginPath();
-        context.moveTo(rock.x+6*rock.scalex,rock.y-4*rock.scaley);
-        context.lineTo(rock.x+5*rock.scalex,rock.y-8*rock.scaley);
-        context.lineTo(rock.x,rock.y-5*rock.scaley);
+        context.moveTo(rock.x-1*rock.scalex,rock.y+4*rock.scaley);
+        context.lineTo(rock.x,rock.y);
+        context.lineTo(rock.x-6*rock.scalex,rock.y+1*rock.scaley);
         context.closePath();
-        context.lineWidth = rock.borderWidth;
-        context.fillStyle = '#00d';
+        context.fillStyle = '#73767F';
         context.fill();
         
         
         context.beginPath();
-        context.moveTo(rock.x,rock.y-5*rock.scaley);
-        context.lineTo(rock.x+6*rock.scalex,rock.y-4*rock.scaley);
-        context.lineTo(rock.x+1*rock.scalex,rock.y-2*rock.scaley);
+        context.moveTo(rock.x-6*rock.scalex,rock.y+1*rock.scaley);
+        context.lineTo(rock.x,rock.y);
+        context.lineTo(rock.x-5*rock.scalex,rock.y-2*rock.scaley);
         context.closePath();
-        context.lineWidth = rock.borderWidth;
-        context.fillStyle = '#00d';
+        context.fillStyle = '#515B7F';
         context.fill();
         
         
         context.beginPath();
-        context.moveTo(rock.x+1*rock.scalex,rock.y-2*rock.scaley);
-        context.lineTo(rock.x+6*rock.scalex,rock.y-4*rock.scaley);
-        context.lineTo(rock.x+6*rock.scalex,rock.y);
+        context.moveTo(rock.x-5*rock.scalex,rock.y-2*rock.scaley);
+        context.lineTo(rock.x,rock.y);
+        context.lineTo(rock.x,rock.y-6*rock.scaley);
         context.closePath();
-        context.lineWidth = rock.borderWidth;
-        context.fillStyle = '#00f';
+        context.fillStyle = '#73767F';
         context.fill();
         return vertexes;
       }
@@ -348,14 +421,27 @@
       //animation loop
       //this is the outer loop for the double loop strucutre to capture events
       function animate(canvas, context, startTime, lastPosition) {
-
+        
+        //speed up game over time
+        riverSpeed = Math.min(riverSpeed + riverSpeedFactor,maxGameSpeed);
+        myBoat.linearSpeed = Math.min(myBoat.linearSpeed + riverSpeedFactor,maxGameSpeed);
+        rockCreation = Math.max(rockCreation - rockCreationFactor,maxRockCreation);
+        
         // clear the canvas and all previous vertexes
         context.clearRect(0, 0, canvas.width, canvas.height);
+        context.rect(0,0,canvas.width,canvas.height);
+        context.fillStyle ="#00BBFF";
+        context.fill();
         rockVertexes = [];
         
         //generate new obstacles
         generateRandomRocks(canvas,rocks);
+        generateRandomWaves(canvas,waves);
         //draw all the obstacles and update their positions
+        calcNewWavePositions(canvas,waves);
+        waves.forEach(function(wave,index,waves){
+            drawWave(wave,context);
+        });
         calcNewRockPositions(canvas,rocks);
         rocks.forEach(function(rock,index,rocks){
            rockVertexes.push(drawRock(rock,context));
@@ -366,14 +452,15 @@
         //draw the boat
         drawBoat(myBoat, context);
         //failure criterion
-        if(failFactor<Math.sqrt(Math.pow(lastPosition[1]-myBoat.y,2)+Math.pow(lastPosition[0]-myBoat.x,2))&&!failFlag){
+        if(/*failFactor<Math.sqrt(Math.pow(lastPosition[1]-myBoat.y,2)+Math.pow(lastPosition[0]-myBoat.x,2))&&*/!failFlag){
             lastPosition = [myBoat.x,myBoat.y];
             // request new frame
             requestAnimFrame(function() {
             animate( canvas, context, startTime, lastPosition);
             });
         } else {
-            alert("fail");
+            var time = (new Date()).getTime() - startTime;
+            banner.innerText = "Crash! Your final time was "+(time/1000)+" seconds";
         }
       }
       
@@ -385,25 +472,42 @@
         var rockVertexes = [];
         var boatVertexes = [];
         var rocks = [];
+        var waves = [];
         var queue = [];
         var lastPosition = [0,0];
         var failFactor = .1;
-        var impactFailFactor = 8;
-        var rockCreationFactor = 0.965;
-        var riverSpeed = 2;
+        var impactFailFactor = 4;
+        var rockCreation = 1;
+        var rockCreationFactor = 0.00001;
+        var maxRockCreation = 0.85;
+        var riverSpeedFactor = 0.0005;
+        var riverSpeed = 1;
         var failFlag = false;
-        var rockSpeed = 4;
+        var rockSpeed = 1;
+        var maxGameSpeed = 10;
+        var waveWidth = 50;
+        var waveHeight = 200;
+        var waveSpeed = rockSpeed;
+        var waveCreation = 0.95;
+        var banner = document.getElementById("banner");
       var myBoat = {
         x: canvas.width/2,
         y: canvas.height-100,
         width: 50,
         height: 100,
         borderWidth: 0,
-        linearSpeed: 2,
+        linearSpeed: riverSpeed,
         rotSpeed: .4,
-        rot: .5,
-        paddleSpeed: 5
+        rot: 0,
+        paddleRot: 0,
+        paddleRotSpeed: .2,
+        paddleSpeed: 5,
+        paddleRotMax: .8,
+        hole: 10
       };
+        
+        //send welcome message
+        banner.innerText = "Welcome! Your game has begun!";
         
         //setup all event listeners and bindings
         calcNewBoatPosition = calcNewBoatPosition.bind(this,queue);
