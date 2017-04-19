@@ -9,7 +9,7 @@
     </style>
   </head>
   <body>
-    <canvas id="myCanvas" width="800" height="500"></canvas>
+    <canvas id="myCanvas" width="800" height="500" style="border: 1px solid black;"></canvas>
     <script>
     //setup scripts
       window.requestAnimFrame = (function(callback) {
@@ -116,10 +116,14 @@
             }
             return axises
         }
-        function calcQueuePosition(queue,boat){
+        function calcQueuePosition(queue,boat,boatVertexes){
+            var mag = Math.sqrt(Math.pow(boatVertexes[0][0]-boat.x,2)+Math.pow(boatVertexes[0][1]-boat.y,2));
+            var vy = boat.paddleSpeed*(boatVertexes[0][1]-boat.y)/mag;
+            var vx = boat.paddleSpeed*(boatVertexes[0][0]-boat.x)/mag;
             for(var i=0;i<queue.length;i++){
                 var item = queue.pop();
                 var newY = boat.y;
+                var newX = boat.x;
                 var rot = boat.rot;
                 if(item === "ArrowRight"){
                     rot = (rot + boat.rotSpeed);
@@ -128,15 +132,20 @@
                     rot = (rot - boat.rotSpeed);
                 }
                 else if(item === "ArrowDown"){
-                    newY = newY + boat.paddleSpeed;
+                    newX = newX - vx;
+                    newY = newY - vy;
                 } else if(item === "ArrowUp"){
-                    newY = newY - boat.paddleSpeed;
+                    newX = newX + vx;
+                    newY = newY + vy;
                 }
                 if(boat.x> 0 && boat.x < canvas.width - boat.width - boat.borderWidth / 2) {
                     boat.rot = rot;
+                    console.log(newX);
+                    boat.x = newX;
                 }
                 if(newY> 0 && newY < canvas.height - boat.height - boat.borderWidth / 2) {
                     boat.y = newY
+                    console.log(newY);
                     boat.rot = rot;
                 }
             }
@@ -155,9 +164,9 @@
             }
         }
         function calcNewBoatPosition(queue,canvas,boat,rockVertexes,boatVertexes,rocks,lastPosition){
+            calcQueuePosition(queue,boat,boatVertexes);
             calcRiverPostition(boat,boatVertexes);
             calcRockIntersection(boat,rockVertexes,boatVertexes,rocks,lastPosition);
-            calcQueuePosition(queue,boat);
         }
         function calcNewRockPositions(canvas,rocks){
             for(var i = 0;i<rocks.length;i++){
@@ -379,11 +388,11 @@
         var queue = [];
         var lastPosition = [0,0];
         var failFactor = .1;
-        var impactFailFactor = 6;
-        var rockCreationFactor = 0.95;
+        var impactFailFactor = 8;
+        var rockCreationFactor = 0.965;
         var riverSpeed = 2;
         var failFlag = false;
-        var rockSpeed = 2;
+        var rockSpeed = 4;
       var myBoat = {
         x: canvas.width/2,
         y: canvas.height-100,
