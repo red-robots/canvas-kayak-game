@@ -1,16 +1,29 @@
 <!DOCTYPE HTML>
 <html>
   <head>
+    <title>Kayak Hero By Bellaworks</title>
     <style>
       body {
         margin: 0px;
         padding: 0px;
+        background-color: lightgrey;
       }
+      h1,h2,p,#banner {
+        color: white;
+        margin: 20px;
+        }
+        #myCanvas {
+            display: block;
+            margin: 0 auto;
+        }
     </style>
   </head>
   <body>
+    <h1>Kayak Hero</h1>
+    <h2>Instructions</h2>
+    <p>Your kayaking down a river! Avoid the rocks with the arrow keys.</p>
     <div id="banner"></div>
-    <canvas id="myCanvas" width="800" height="500" style="border: 1px solid black;"></canvas>
+    <canvas id="myCanvas" width="1000" height="600" style="border: 1px solid black;"></canvas>
     <script>
     //setup scripts
       window.requestAnimFrame = (function(callback) {
@@ -23,15 +36,19 @@
         function manageKeydown(queue,event){
             switch(event.code){
                 case "ArrowRight":
+                    event.preventDefault();
                     queue.push("ArrowRight");
                     break;
                 case "ArrowLeft":
+                    event.preventDefault();
                     queue.push("ArrowLeft");
                     break;
                 case "ArrowUp":
+                    event.preventDefault();
                     queue.push("ArrowUp");
                     break;
                 case "ArrowDown":
+                    event.preventDefault();
                     queue.push("ArrowDown");
                     break;
             }
@@ -138,11 +155,11 @@
                 else if(item === "ArrowDown"){
                     newX = newX - vx;
                     newY = newY - vy;
-                    paddleRot = (paddleRot + boat.paddleRotSpeed) % boat.paddleRotMax;
+                    paddleRot = ((paddleRot + boat.paddleRotSpeed)% boat.paddleRotMax) ;
                 } else if(item === "ArrowUp"){
                     newX = newX + vx;
                     newY = newY + vy;
-                    paddleRot = (paddleRot + boat.paddleRotSpeed) % boat.paddleRotMax;
+                    paddleRot = ((paddleRot + boat.paddleRotSpeed)% boat.paddleRotMax) ;
                 }
                 if(boat.x> 0 && boat.x < canvas.width - boat.width - boat.borderWidth / 2) {
                     boat.rot = rot;
@@ -152,7 +169,7 @@
                 if(newY> 0 && newY < canvas.height - boat.height - boat.borderWidth / 2) {
                     boat.y = newY
                     boat.rot = rot;
-                    boat.paddleRot = paddleRot;
+                    boat.paddleRot = paddleRot ;
                 }
             }
         }
@@ -480,11 +497,11 @@
         var rockCreation = 1;
         var rockCreationFactor = 0.00001;
         var maxRockCreation = 0.85;
-        var riverSpeedFactor = 0.0005;
+        var riverSpeedFactor = 0.001;
         var riverSpeed = 1;
         var failFlag = false;
         var rockSpeed = 1;
-        var maxGameSpeed = 10;
+        var maxGameSpeed = 15;
         var waveWidth = 50;
         var waveHeight = 200;
         var waveSpeed = rockSpeed;
@@ -500,25 +517,30 @@
         rotSpeed: .4,
         rot: 0,
         paddleRot: 0,
-        paddleRotSpeed: .2,
+        paddleRotSpeed: .1,
         paddleSpeed: 5,
-        paddleRotMax: .8,
+        paddleRotMax: .5,
         hole: 10
       };
         
         //send welcome message
         banner.innerText = "Welcome! Your game has begun!";
-        
+        context.font = 'italic 40pt Calibri';
+        context.fillText('Click To Start', 150, 100);
+      
         //setup all event listeners and bindings
         calcNewBoatPosition = calcNewBoatPosition.bind(this,queue);
         addEvent("keydown",document,manageKeydown.bind(this,queue));
     
-        
-      // wait one second before starting animation
-      setTimeout(function() {
-        var startTime = (new Date()).getTime();
-        animate(canvas, context, startTime, lastPosition);
-      }, 1000);
+        // wait one second before starting animation
+        function start(){
+            setTimeout(function() {
+                var startTime = (new Date()).getTime();
+                animate(canvas, context, startTime, lastPosition);
+            }, 1000);
+        }
+        //add event listener for start
+        addEvent("click",canvas,start);
     </script>
   </body>
 </html>      
