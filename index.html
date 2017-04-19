@@ -260,6 +260,14 @@
                 obj.attachEvent("on"+event,func);
             }
         }
+        function removeEvent(event,obj,func){
+            if(obj.removeEventListener){
+                obj.removeEventListener(event,func);
+            }
+            else if(obj.removeEvent){
+                obj.attachEvent("on"+event,func);
+            }
+        }
       
       
       //drawing functions
@@ -497,7 +505,7 @@
         var rockCreation = 1;
         var rockCreationFactor = 0.00001;
         var maxRockCreation = 0.85;
-        var riverSpeedFactor = 0.001;
+        var riverSpeedFactor = 0.0005;
         var riverSpeed = 1;
         var failFlag = false;
         var rockSpeed = 1;
@@ -524,7 +532,7 @@
       };
         
         //send welcome message
-        banner.innerText = "Welcome! Your game has begun!";
+        banner.innerText = "Welcome! Your score will show here when you are finised!";
         context.font = 'italic 40pt Calibri';
         context.fillText('Click To Start', 150, 100);
       
@@ -534,6 +542,7 @@
     
         // wait one second before starting animation
         function start(){
+            removeEvent("click",canvas,start);
             setTimeout(function() {
                 var startTime = (new Date()).getTime();
                 animate(canvas, context, startTime, lastPosition);
