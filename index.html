@@ -172,7 +172,7 @@
         //generate new obstacles
         function generateRandomRocks(canvas,rocks){
             var rand = Math.random();
-            if(rand>0.93){
+            if(rand>rockCreationFactor){
                 var rand2 = Math.random();
                 var rand3 = Math.random();
                 var randRock = {
@@ -379,7 +379,8 @@
         var queue = [];
         var lastPosition = [0,0];
         var failFactor = .1;
-        var impactFailFactor = 5;
+        var impactFailFactor = 6;
+        var rockCreationFactor = 0.95;
         var riverSpeed = 2;
         var failFlag = false;
         var rockSpeed = 2;
